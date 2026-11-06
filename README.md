@@ -7,6 +7,10 @@ The hard part on Windows is that `fastboot` can't see the phone and **WSL2 has n
 default**. The trick used here: **bridge the phone's USB into WSL with `usbipd-win`**, then do
 everything from Linux — no Windows driver-signing pain.
 
+> 📌 **Resuming / current status:** see [`docs/HANDOFF.md`](docs/HANDOFF.md) — dense machine-readable
+> state. As of 2026-11-06: bootloader unlocked, images build, but **neither kernel boots yet**
+> (bootloop); leading cause + next steps are in the handoff.
+
 > ⚠️ **This wipes the phone.** The 5T pmOS port is **archived/unmaintained** — audio is broken
 > (fine for a server), Wi‑Fi is unconfirmed (you may need a USB‑C ethernet/Wi‑Fi dongle), and
 > there are no upstream updates. See [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
