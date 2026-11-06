@@ -43,13 +43,13 @@ sudo fastboot reboot
 
 cat <<'EOF'
 
-Flashed. The phone is booting pmOS (first boot ~1-3 min; the OEM logo may stay frozen —
-that's just the splash, pmOS runs headless behind it).
+Flashed. The phone is booting pmOS (first boot ~1-3 min). The OEM logo may stay on screen, or you
+may see console text ending at a "dumpling login:" prompt — both are fine. It runs HEADLESS; you do
+NOT log in on the phone. You log in over the USB cable from your laptop.
 
-To get in:
-  ./bridge-phone.sh          # re-bridges the booted phone's USB-network gadget
-  ssh user@172.16.42.1       # password you set during build
+To get in (the phone's USB network is RNDIS, which WSL can't drive but WINDOWS can natively):
+  1) In Windows PowerShell:  powershell -ExecutionPolicy Bypass -File windows\setup-usb-network.ps1
+  2) From a WINDOWS terminal (NOT WSL):  ssh user@172.16.42.1     # password you set during build
 
-If no USB-network interface appears after a few minutes, see docs/TROUBLESHOOTING.md
-(archived port: the kernel may not boot; try a stable channel or the 'alpine' kernel).
+See docs/ACCESS.md for details and docs/TROUBLESHOOTING.md if the phone bootloops or no adapter shows.
 EOF

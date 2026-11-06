@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# bridge-phone.sh — bridge the OnePlus 5T's USB into WSL2 via usbipd-win, so native
-# Linux `fastboot` (and, once booted, the USB-network gadget) can see it.
+# bridge-phone.sh — bridge the OnePlus 5T's USB into WSL2 via usbipd-win so native Linux
+# `fastboot` can see it. This is for FASTBOOT mode (18d1:d00d) — building and flashing.
 #
-# Run it with the phone connected. Works for the phone in FASTBOOT mode (18d1:d00d)
-# and, after pmOS boots, for its USB-network gadget (auto-detects whatever shows up).
+# NOTE: after pmOS boots, its USB network is RNDIS, which the WSL2 kernel CANNOT drive (no
+# rndis_host module). Do NOT use this to reach the booted phone — use Windows instead:
+# windows/setup-usb-network.ps1 + `ssh user@172.16.42.1` from a Windows terminal. See docs/ACCESS.md.
 #
-# Idempotent. Re-run any time the connection resets (reboot, replug).
+# Idempotent. Re-run any time the fastboot connection resets (reboot, replug).
 set -uo pipefail
 
 USBIPD='C:\Program Files\usbipd-win\usbipd.exe'
@@ -46,7 +47,9 @@ if sudo fastboot devices 2>&1 | grep -q fastboot; then
   echo -n "product: "; sudo fastboot getvar product 2>&1 | awk -F': ' '/product:/{print $2; exit}'
   echo -e "\n\033[1;32mPHONE READY (fastboot).\033[0m"
 else
-  echo "Not in fastboot. If pmOS is booted, a USB network interface should appear:"
-  ip -brief addr show 2>/dev/null | grep -iE 'usb|enx|172\.16\.42' || echo "  (no usb net iface yet — give it ~30s and re-run, or it may still be booting)"
-  echo "If booted: ssh user@172.16.42.1"
+  echo "Device attached but NOT in fastboot."
+  echo "If pmOS has booted, its network is RNDIS and WSL can't drive it — switch to Windows:"
+  echo "  1) usbipd detach/unbind busid $BUSID (so Windows owns it), then"
+  echo "  2) windows\\setup-usb-network.ps1  +  ssh user@172.16.42.1  (from a Windows terminal)."
+  echo "See docs/ACCESS.md. If you expected fastboot, make sure the phone is on the fastboot screen."
 fi

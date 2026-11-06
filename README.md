@@ -1,72 +1,152 @@
-# OnePlus 5T → postmarketOS headless server (from Windows + WSL2)
+# OnePlus 5T → postmarketOS headless server (Windows + WSL2)
 
-Turn a **OnePlus 5T** (codename `dumpling`, Snapdragon 835) into a small always-on
-**Linux server** by flashing **postmarketOS** (bare-metal Alpine/systemd, no Android).
+Turn a **OnePlus 5T** (codename `dumpling`, Snapdragon 835 / msm8998) into a small, always-on
+**Linux server** by flashing **postmarketOS** — no Android, bare-metal Alpine with OpenRC. You then
+reach it headless over SSH and run whatever you like (Docker, a database, a static site, …).
 
-The hard part on Windows is that `fastboot` can't see the phone and **WSL2 has no USB by
-default**. The trick used here: **bridge the phone's USB into WSL with `usbipd-win`**, then do
-everything from Linux — no Windows driver-signing pain.
+This guide is written for the awkward real-world setup where your only machine is **Windows with
+WSL2**: Windows `fastboot` can't talk to the phone's bootloader, and WSL2 has no USB at all. The
+trick is to **bridge the phone's USB into WSL with `usbipd-win`** and flash from Linux `fastboot`.
 
-> 📌 **Resuming / current status:** see [`docs/HANDOFF.md`](docs/HANDOFF.md) — dense machine-readable
-> state. As of 2026-11-06: bootloader unlocked, images build, but **neither kernel boots yet**
-> (bootloop); leading cause + next steps are in the handoff.
+> ✅ **Status: working.** A OnePlus 5T boots postmarketOS **v26.06** (mainline kernel, OpenRC,
+> headless) and is reachable over SSH. The steps and gotchas below are exactly what it took.
 
-> ⚠️ **This wipes the phone.** The 5T pmOS port is **archived/unmaintained** — audio is broken
-> (fine for a server), Wi‑Fi is unconfirmed (you may need a USB‑C ethernet/Wi‑Fi dongle), and
-> there are no upstream updates. See [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
+> ⚠️ **This erases the phone**, and the 5T port is **archived/unmaintained** upstream: audio is
+> broken (irrelevant for a server), on-device Wi‑Fi is unconfirmed (plan for the USB cable or a
+> USB‑C ethernet dongle), and there are no more upstream updates. Don't use a phone you care about,
+> and don't leave a phone battery charging 24/7 unattended (swelling/fire risk).
 
 ---
 
+## Why postmarketOS (and not Termux/Android)?
+A real server workload — **Docker especially** — needs a real Linux kernel with cgroups, namespaces
+and overlayfs. Termux/proot **cannot** run Docker. postmarketOS replaces Android with a normal
+Alpine userspace on a kernel that supports all of that, which is why it's the target here.
+
 ## What you need
-- OnePlus 5T, USB‑C cable to the laptop.
-- Windows 10/11 with **WSL2 (Ubuntu)** whose kernel has the `vhci-hcd` (USB/IP) module
-  (standard on recent WSL2 kernels — the scripts check this).
-- ~10 GB free disk and some patience (the archived kernel is compiled from source once).
+- OnePlus 5T + a USB‑C data cable.
+- Windows 10/11 with **WSL2 (Ubuntu)**. Recent WSL2 kernels include the `vhci-hcd` (USB/IP) module
+  the scripts rely on; `wsl --update` if yours doesn't.
+- ~10 GB free disk. The build is **fast** (the kernel is a prebuilt binary on v26.06 — no 40‑minute
+  compile), mostly package downloads.
+- About an hour start to finish, most of it unattended.
 
-## Order of operations
+---
 
-| Step | Where | Script | What it does |
-|------|-------|--------|--------------|
+## The whole flow at a glance
+
+| # | Where | Script | What happens |
+|---|-------|--------|--------------|
 | 1 | **Windows (Admin PowerShell)** | [`windows/install-windows-tools.ps1`](windows/install-windows-tools.ps1) | Installs `fastboot` (platform-tools) + `usbipd-win` |
-| 2 | **WSL** | [`wsl/01-install-wsl-tools.sh`](wsl/01-install-wsl-tools.sh) | Installs `fastboot`, the `usbip` client, and `pmbootstrap` (git) |
-| 3 | Phone | — | Enable **Developer Options → OEM unlocking** (needed to unlock) |
-| 4 | **WSL** | [`wsl/bridge-phone.sh`](wsl/bridge-phone.sh) | Bridges the phone (in **fastboot**) into WSL so Linux `fastboot` sees it |
-| 5 | **WSL** | [`wsl/02-build-pmos.sh`](wsl/02-build-pmos.sh) | Configures pmOS, compiles the msm8998 kernel, builds the image |
-| 6 | **WSL** | [`wsl/03-flash-pmos.sh`](wsl/03-flash-pmos.sh) | Unlocks bootloader, flashes boot + rootfs, reboots into pmOS |
-| 7 | **WSL** | [`wsl/bridge-phone.sh`](wsl/bridge-phone.sh) | Re-bridge the phone's **USB-network** gadget, then `ssh user@172.16.42.1` |
+| 2 | Phone | — | Enable **Developer Options → OEM unlocking** |
+| 3 | **WSL** | [`wsl/01-install-wsl-tools.sh`](wsl/01-install-wsl-tools.sh) | Installs `fastboot`, the `usbip` client, and `pmbootstrap` (git) |
+| 4 | **WSL** | [`wsl/bridge-phone.sh`](wsl/bridge-phone.sh) | Bridges the phone (in **fastboot**) into WSL (one UAC click) |
+| 5 | **WSL** | [`wsl/02-build-pmos.sh`](wsl/02-build-pmos.sh) | Configures pmOS **v26.06 / mainline / OpenRC** and builds the headless image |
+| 6 | **WSL** | [`wsl/03-flash-pmos.sh`](wsl/03-flash-pmos.sh) | Unlocks the bootloader, flashes `boot` + rootfs, reboots into pmOS |
+| 7 | **Windows** | [`windows/setup-usb-network.ps1`](windows/setup-usb-network.ps1) | Brings the phone's USB network up on Windows so you can SSH in |
 
-### Quick start
+Full detail on the trickiest part (getting in after boot) is in
+[`docs/ACCESS.md`](docs/ACCESS.md). Everything that bit us is in
+[`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
+
+---
+
+## Step by step
+
+### 1. Windows tools (Admin PowerShell)
 ```powershell
-# 1) In an ADMIN PowerShell on Windows:
 powershell -ExecutionPolicy Bypass -File windows\install-windows-tools.ps1
 ```
+Installs Google Platform Tools (`fastboot`) and `usbipd-win`. Open a **new** terminal afterwards so
+`PATH` updates.
+
+### 2. Unlock permission on the phone
+On the phone: **Settings → About phone →** tap *Build number* 7× to enable Developer Options, then
+**Developer Options → enable "OEM unlocking"**. (Without this, the unlock in step 6 is refused.)
+
+### 3. WSL tools
 ```bash
-# 2) In WSL (Ubuntu):
 cd ~/oneplus5t-pmos-server/wsl
 ./01-install-wsl-tools.sh
+```
 
-# 4) Put the phone on the FASTBOOT screen (power off, hold Volume Up + Power), then:
-./bridge-phone.sh          # should print "PHONE READY"
+### 4. Bridge the phone (fastboot)
+Put the phone on its **fastboot screen**: power it off, then hold **Volume Up + Power**.
+> Tip: OnePlus phones **auto-boot when USB power is applied**. If you can't get it to stay off,
+> unplug the cable first, force-off (hold Power ~15 s), then Volume Up + Power, and plug back in.
 
-# 5) Build the image (compiles the kernel once — slow, ~20-40 min):
-./02-build-pmos.sh
+```bash
+./bridge-phone.sh      # click YES on the Windows UAC popup; expect "PHONE READY (fastboot)"
+```
 
-# 6) Flash it (wipes phone; you confirm the unlock on the phone screen with Volume+Power):
+### 5. Build the image
+```bash
+./02-build-pmos.sh     # v26.06 + mainline + OpenRC, headless; mostly downloads
+```
+Default login is `user` / `changeme123` — override with `PMOS_PASSWORD=yourpass ./02-build-pmos.sh`.
+
+### 6. Flash it (wipes the phone)
+```bash
 ./03-flash-pmos.sh
 ```
+The first run triggers the unlock: **watch the phone** — a confirm screen appears, use **Volume** to
+highlight *UNLOCK* and **Power** to confirm. The phone wipes and reboots; put it back in fastboot,
+re-run `./bridge-phone.sh`, then `./03-flash-pmos.sh` again to flash and reboot into postmarketOS.
 
-## Getting in after it boots
-postmarketOS (UI=none) comes up **headless** and exposes a **USB-network** interface.
-Re-run `./bridge-phone.sh` (it also handles the booted phone), then:
-```bash
-ssh user@172.16.42.1      # password set during build (default: changeme123 — change it!)
+### 7. Get in (SSH)
+postmarketOS comes up **headless** and offers a network over the USB cable using **RNDIS**. Because
+WSL2's kernel can't drive RNDIS but **Windows can natively**, you connect over Windows:
+
+```powershell
+# In Windows PowerShell:
+powershell -ExecutionPolicy Bypass -File windows\setup-usb-network.ps1
 ```
-From there it's a normal Linux box: `sudo apk add nodejs postgresql …`, and a
-[Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
-gives you a free public HTTPS URL past home CGNAT.
+It checks the adapter, walks you through the one-time driver assignment if needed, and tells you when
+the phone answers. Then, **from a Windows terminal** (not WSL — WSL can't route to this network):
+```powershell
+ssh user@172.16.42.1          # password: changeme123 (or what you set)
+```
+You land at a `dumpling:~$` prompt — that's your server. See [`docs/ACCESS.md`](docs/ACCESS.md) for
+the why and for alternatives (static IP, driving it from WSL via `ssh.exe`, keys).
 
-## Why this approach (vs. plain Windows fastboot)
-Google's `fastboot` on Windows needs its **Android Bootloader Interface** driver, which does **not**
-cover the OnePlus fastboot ID `18d1:d00d`. Binding WinUSB with Zadig makes Device Manager happy but
-Google's fastboot still won't talk to it. Bridging the raw USB into WSL and using **Linux fastboot**
-sidesteps all of that — Linux just needs the device, no signed driver. See the troubleshooting doc.
+---
+
+## After you're in
+It's a normal Alpine box:
+```sh
+sudo apk update
+sudo passwd user                 # change the default password!
+# e.g. Docker:
+sudo apk add docker && sudo rc-update add docker && sudo service docker start
+docker info                      # confirm the kernel supports what you need
+```
+For a public HTTPS endpoint from behind home CGNAT, a free
+[Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
+works well and needs no port-forwarding.
+
+---
+
+## Why bridge USB into WSL instead of using Windows fastboot?
+Google's Windows `fastboot` wants its *Android Bootloader Interface* driver, which does **not** match
+the OnePlus fastboot USB id `18d1:d00d`, so it shows `< waiting for any device >` forever. Binding
+WinUSB with Zadig makes Device Manager look happy but Google's `fastboot` still won't talk to it.
+Bridging the raw USB into WSL with `usbipd-win` and using **Linux `fastboot`** sidesteps all of the
+driver-signing pain — Linux just needs the device. (Ironically, once pmOS boots, the *network* side
+is the opposite: Windows drives RNDIS natively and WSL can't — hence step 7 runs on Windows.)
+
+## Repo layout
+```
+windows/install-windows-tools.ps1   fastboot + usbipd-win
+windows/setup-usb-network.ps1       post-boot: RNDIS adapter + SSH reachability
+wsl/01-install-wsl-tools.sh         fastboot, usbip client, pmbootstrap
+wsl/bridge-phone.sh                 bridge the phone's USB into WSL (fastboot)
+wsl/02-build-pmos.sh                configure + build the pmOS image (v26.06)
+wsl/03-flash-pmos.sh                unlock + flash + reboot
+docs/ACCESS.md                      getting in after boot (RNDIS/SSH), in depth
+docs/TROUBLESHOOTING.md             every trap we hit, and the fix
+```
+
+## Credits
+Built on [postmarketOS](https://postmarketos.org/) and
+[usbipd-win](https://github.com/dorssel/usbipd-win). The `dumpling` port is community work; it is
+archived, so treat this as a best-effort hobby server, not a production platform.
