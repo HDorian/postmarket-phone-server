@@ -76,8 +76,25 @@ Reach it from Windows — see [`ACCESS.md`](ACCESS.md). A VPN (e.g. NordVPN) on 
 with the `172.16.42.0/24` link; disconnect it if ping/SSH misbehaves.
 
 ## Port caveats
-- `dumpling` pmOS is **archived/unmaintained**; audio is broken (fine for a server); on-device
-  Wi‑Fi is unconfirmed (plan for the USB cable or a USB‑C ethernet dongle).
-- This kernel's firewall won't work (no nftables in the kernel config) — harmless, just noted during
-  install.
+- `dumpling` pmOS is **archived/unmaintained**; audio is broken (fine for a server).
 - Don't leave a phone battery charging 24/7 unattended (swelling/fire risk).
+
+## Day 2 traps (Wi‑Fi / NTP / Docker / firewall)
+Full steps are in [`SERVER-SETUP.md`](SERVER-SETUP.md) and [`HARDENING.md`](HARDENING.md); these are
+the error signatures and quick fixes.
+
+- **Wi‑Fi actually works** (the wiki says "unconfirmed"). `wlan0` comes up via `ath10k_snoc`
+  (WCN3990). The chip has **no burned-in MAC** (`dmesg`: "invalid MAC address; choosing random"), so
+  pin it with `nmcli ... 802-11-wireless.cloned-mac-address` or DHCP reservations won't stick.
+- **TLS / image pulls fail** — "certificate ... is not yet valid: current time 1970-…": the clock is
+  at epoch. `apk add chrony` + `chronyc makestep`.
+- **dockerd: "Devices cgroup isn't mounted"**: the `cgroups` service isn't running —
+  `rc-update add cgroups boot && rc-service cgroups start`.
+- **runc: `bpf_prog_query(BPF_CGROUP_DEVICE) failed`** on cgroup v2: this kernel has no
+  `CONFIG_CGROUP_BPF`. Use cgroup **v1** — `rc_cgroup_mode="legacy"` in `/etc/rc.conf`, then reboot.
+- **dockerd: "failed to register bridge driver … iptables … addrtype … not supported"**: the
+  nf_tables `iptables` shim can't do NAT here. Set `"iptables": false`, `"bridge": "none"` in
+  `/etc/docker/daemon.json` and use `--network host`.
+- **Firewall:** `iptables` (nf_tables backend) can't do `-m conntrack`/`-m addrtype` ("extension …
+  not supported"), but the **native `nft` tool can** (`ct state established,related accept` works).
+  Use `nftables`, not the `iptables` shim.

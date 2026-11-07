@@ -8,13 +8,15 @@ This guide is written for the awkward real-world setup where your only machine i
 WSL2**: Windows `fastboot` can't talk to the phone's bootloader, and WSL2 has no USB at all. The
 trick is to **bridge the phone's USB into WSL with `usbipd-win`** and flash from Linux `fastboot`.
 
-> ✅ **Status: working.** A OnePlus 5T boots postmarketOS **v26.06** (mainline kernel, OpenRC,
-> headless) and is reachable over SSH. The steps and gotchas below are exactly what it took.
+> ✅ **Status: working, end to end.** A OnePlus 5T boots postmarketOS **v26.06** (mainline kernel,
+> OpenRC, headless), runs **standalone on Wi‑Fi**, runs **Docker**, and is **hardened** (keys-only
+> SSH + `nftables` firewall). Flashing is below; turning it into a real server is in
+> [`docs/SERVER-SETUP.md`](docs/SERVER-SETUP.md) and [`docs/HARDENING.md`](docs/HARDENING.md).
 
 > ⚠️ **This erases the phone**, and the 5T port is **archived/unmaintained** upstream: audio is
-> broken (irrelevant for a server), on-device Wi‑Fi is unconfirmed (plan for the USB cable or a
-> USB‑C ethernet dongle), and there are no more upstream updates. Don't use a phone you care about,
-> and don't leave a phone battery charging 24/7 unattended (swelling/fire risk).
+> broken (irrelevant for a server) and there are no more upstream updates. **Wi‑Fi does work**
+> (confirmed — so it runs standalone, cable just for power). Don't use a phone you care about, and
+> don't leave a phone battery charging 24/7 unattended (swelling/fire risk).
 
 ---
 
@@ -111,15 +113,17 @@ the why and for alternatives (static IP, driving it from WSL via `ssh.exe`, keys
 
 ---
 
-## After you're in
-It's a normal Alpine box:
-```sh
-sudo apk update
-sudo passwd user                 # change the default password!
-# e.g. Docker:
-sudo apk add docker && sudo rc-update add docker && sudo service docker start
-docker info                      # confirm the kernel supports what you need
-```
+## Day 2 — make it a real server
+Once you're in, change the default password (`sudo passwd user`), then follow:
+
+- **[`docs/SERVER-SETUP.md`](docs/SERVER-SETUP.md)** — join **Wi‑Fi** (go standalone, ditch the
+  cable), fix the clock (**NTP** — it boots at 1970, which breaks TLS), and install **Docker** with
+  the kernel workarounds this archived port needs (cgroup **v1**, host networking). Optional: a live
+  status dashboard on the phone's screen.
+- **[`docs/HARDENING.md`](docs/HARDENING.md)** — keys-only SSH, a working **`nftables`** firewall
+  (the `iptables` shim can't do stateful rules on this kernel — native `nft` can), auto-updates, and
+  Docker hardening.
+
 For a public HTTPS endpoint from behind home CGNAT, a free
 [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
 works well and needs no port-forwarding.
@@ -143,6 +147,8 @@ wsl/bridge-phone.sh                 bridge the phone's USB into WSL (fastboot)
 wsl/02-build-pmos.sh                configure + build the pmOS image (v26.06)
 wsl/03-flash-pmos.sh                unlock + flash + reboot
 docs/ACCESS.md                      getting in after boot (RNDIS/SSH), in depth
+docs/SERVER-SETUP.md                day 2: Wi-Fi standalone, NTP, Docker, status screen
+docs/HARDENING.md                   keys-only SSH, nftables firewall, auto-updates, Docker
 docs/TROUBLESHOOTING.md             every trap we hit, and the fix
 ```
 
