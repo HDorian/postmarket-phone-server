@@ -1,0 +1,11 @@
+#!/sbin/openrc-run
+# /etc/init.d/powerkey — toggle the screen on the power button (runs as root).
+name="powerkey"
+description="Power-button screen toggle"
+command="/usr/bin/python3"
+command_args="/usr/local/bin/powerkey-listen.py"
+command_background=true
+pidfile="/run/powerkey.pid"
+output_log="/var/log/powerkey.log"
+error_log="/var/log/powerkey.log"
+depend() { after local; }

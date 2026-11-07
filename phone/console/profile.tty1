@@ -1,0 +1,18 @@
+# ~/.profile
+# tty1 (phone screen): split view — dashboard (top half) + live stack logs (bottom half),
+# in the shared session 'main'. SSH logins (pts/*) get a normal shell.
+# Drive/attach from a laptop:  tmux attach -t main   (or: tmux send-keys -t main:srv.1 '<cmd>' Enter)
+case "$(tty)" in
+  /dev/tty1)
+    if command -v tmux >/dev/null 2>&1; then
+      if tmux has-session -t main 2>/dev/null; then
+        exec tmux attach -t main
+      else
+        tmux new-session -d -s main -n srv '/usr/local/bin/server-dash.sh'
+        tmux split-window -v -l 50% -t main:srv '/usr/local/bin/server-logs.sh'
+        tmux select-pane -t main:srv.1
+        exec tmux attach -t main
+      fi
+    fi
+    ;;
+esac

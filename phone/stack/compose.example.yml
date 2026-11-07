@@ -1,0 +1,44 @@
+# Multi-app on the phone — host networking only.
+# The archived kernel can't run the docker bridge (nf_tables NAT fails) and there's no /dev/net/tun,
+# so every service uses `network_mode: host` and binds the host directly on its own port. There is
+# NO `-p` publishing and NO compose bridge DNS — services reach each other via 127.0.0.1:<port>.
+#
+# "Separation" between apps here = one compose project each + own named volumes + memory/cpu caps
+# (cgroup v1 works) + a unique localhost port. Not network-isolated, but fine for a test host.
+#
+# Expose publicly by adding the port to the cloudflared tunnel ingress (../cloudflared/), NOT by
+# opening a firewall port. Build images with `docker build --network=host` (build steps need host
+# net for package downloads + to reach sibling services) — see ../../docs/APP-HOSTING.md.
+name: demo
+services:
+  app:
+    image: your/app:latest
+    network_mode: host                 # bind 127.0.0.1:8080 (set via PORT/HOSTNAME in the image)
+    environment:
+      - PORT=8080
+      - HOSTNAME=0.0.0.0
+    restart: unless-stopped
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080 >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  db:
+    image: postgres:16-alpine
+    network_mode: host                 # 127.0.0.1:5432
+    environment:
+      POSTGRES_PASSWORD: change-me
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  dbdata:

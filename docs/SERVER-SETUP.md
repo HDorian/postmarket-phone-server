@@ -126,51 +126,71 @@ You should see **"Hello from Docker!"**. That's a real container running on your
 
 ---
 
-## 4. (Optional) Live status screen on the phone
+## 4. Live dashboard on the phone screen
 
-Nice touch for a headless box sitting on a shelf: turn the phone's screen into an **auto-login
-console** showing a status header (battery / CPU / IP / clock) plus a live shell you can drive over
-SSH. It uses `tmux` + a bigger console font.
+Turn the shelf phone's screen into a **split monitor**: a full metrics panel on top, a live log stream
+below — in a shared `tmux` session you can also drive from a laptop. Ready-made scripts are in
+[`../phone/console/`](../phone/console).
 
 ```sh
-sudo apk add tmux
-# bigger console font (the screen is 1080x2160 — the default 8x16 is tiny)
+sudo apk add tmux bash
+# bigger console font (the screen is 1080x2160 -> ~67x67 cells; the default 8x16 is tiny)
 sudo setfont -C /dev/tty1 /usr/share/consolefonts/ter-132n.psf.gz
 ```
 
-Autologin `user` on tty1 — edit `/etc/inittab`, change the `tty1` getty line to:
+Autologin `user` on tty1 — in `/etc/inittab`, set the `tty1` line to:
 
 ```
 tty1::respawn:/usr/bin/login -f user
 ```
 
-`~/.tmux.conf` (two-line status header that fits the narrow screen):
-
-```tmux
-set -g status 2
-set -g status-interval 2
-set -g status-format[0] "#[bg=colour30,fg=colour231,bold] #H #[default]#[align=right] %a %Y-%m-%d %H:%M:%S "
-set -g status-format[1] "#[bg=colour236,fg=colour190,bold] #(/usr/local/bin/tmux-status.sh) "
-```
-
-`~/.profile` — on the physical screen only, attach the shared tmux session:
+Install the scripts + config:
 
 ```sh
-case "$(tty)" in
-  /dev/tty1) command -v tmux >/dev/null && exec tmux new-session -A -s main ;;
-esac
+sudo install -m755 phone/console/server-dash.sh phone/console/server-logs.sh /usr/local/bin/
+cp phone/console/tmux.conf    ~/.tmux.conf
+cp phone/console/profile.tty1 ~/.profile          # rebuilds the split on tty1 login
 ```
 
-Put a small `/usr/local/bin/tmux-status.sh` that prints battery/CPU/load/IP (read from
-`/sys/class/power_supply/*/capacity`, `/sys/class/thermal/*/temp`, `ip -4 addr`). Then from your
-laptop you can drive what shows on the phone screen with:
+- **`server-dash.sh`** (top pane) — flicker-free full-height panel: uptime + NTP, total + per-core CPU
+  with load/freq, every thermal zone, mem/disk bars, live network throughput + TCP count, battery
+  volts/amps/watts, a **live auto-enumerated container list** (count + each container's health +
+  CPU/mem, from `docker ps`/`inspect` + a backgrounded `docker stats`), and tunnel/runner state.
+- **`server-logs.sh`** (bottom pane) — `docker compose logs -f` of your stack (real-time activity;
+  Ctrl-C drops to a shell). *Why not a plain shell: your SSH work runs in other shells, invisible here —
+  a log stream actually shows what the box is doing.*
+- `~/.tmux.conf` sets `status off` (the top pane **is** the header); `~/.profile` builds the 50/50 split
+  on login (`new-session … server-dash.sh` + `split-window -v -l 50% … server-logs.sh`).
+
+Drive what's on the phone from a laptop:
 
 ```sh
-ssh user@<phone-ip> 'tmux send-keys -t main "docker ps" Enter'
+ssh user@<phone-ip> 'tmux send-keys -t main:srv.1 "docker ps" Enter'   # run in the bottom pane
+ssh user@<phone-ip> 'tmux attach -t main'                              # or just watch it
 ```
 
-To make the font persist across reboots, add the `setfont` line to `/etc/local.d/` and
-`sudo rc-update add local default`.
+### Keep the screen on — and toggle it with the power button
+
+The Linux console blanks and the AMOLED panel sleeps, so the screen goes dark. Disable console blanking
+at boot, and (nice touch) make the **power button** turn the screen on/off:
+
+```sh
+sudo install -m755 phone/console/30-console-unblank.start /etc/local.d/
+sudo install -m755 phone/console/screen-toggle.sh phone/console/screen-keepalive.sh \
+                   phone/console/powerkey-listen.py /usr/local/bin/
+sudo install -m755 phone/console/powerkey.openrc /etc/init.d/powerkey
+sudo rc-update add local default      # runs the unblank (+ put your setfont line here too)
+sudo rc-update add powerkey default   # python listens on the pwrkey evdev node, toggles the panel
+sudo rc-service powerkey start
+# keepalive: re-assert the screen ON if it sleeps, UNLESS you pressed power-off (minutely cron)
+echo '* * * * * /usr/local/bin/screen-keepalive.sh' | sudo tee -a /etc/crontabs/root
+sudo rc-service crond restart
+```
+
+`powerkey-listen.py` reads the `pm8941_pwrkey` event node as root and toggles the backlight
+(`/sys/class/backlight/*/bl_power` + `brightness`) on each short press; `screen-keepalive.sh` re-asserts
+it on if it sleeps on its own but respects a deliberate power-off (tracked in `/run/screen.off`). Add
+your `setfont` line to a `/etc/local.d/*.start` script so the big font also survives reboot.
 
 ---
 

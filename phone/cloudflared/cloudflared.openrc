@@ -1,0 +1,17 @@
+#!/sbin/openrc-run
+# /etc/init.d/cloudflared — run a Cloudflare named tunnel as a service.
+#   sudo install -m755 cloudflared.openrc /etc/init.d/cloudflared
+#   sudo rc-update add cloudflared default && sudo rc-service cloudflared start
+#
+# NOTE: output_log MUST be writable by command_user. Logging to /var/log fails here
+# because the service runs as 'user' (who can't create files in /var/log) and the child
+# then dies on start — so we log under the user's home.
+name="cloudflared"
+description="Cloudflare Tunnel"
+supervisor="supervise-daemon"
+command="/usr/local/bin/cloudflared"
+command_args="--no-autoupdate --config /home/user/.cloudflared/config.yml tunnel run"
+command_user="user:user"
+output_log="/home/user/.cloudflared/cloudflared.log"
+error_log="/home/user/.cloudflared/cloudflared.log"
+depend() { need net; }

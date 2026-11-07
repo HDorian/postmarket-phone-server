@@ -1,0 +1,18 @@
+# ~/.cloudflared/config.yml — ingress for a Cloudflare named tunnel.
+# Create the tunnel first:  cloudflared tunnel login  &&  cloudflared tunnel create <name>
+# (that writes the id + <id>.json credentials into ~/.cloudflared/).
+#
+# DNS: add a CNAME per hostname -> <TUNNEL_ID>.cfargotunnel.com, Proxied (orange cloud).
+#   `cloudflared tunnel route dns <name> <hostname>` creates it for you, OR add it by hand in the
+#   Cloudflare dashboard (it only adds the new subdomain — it never touches your apex/other records).
+#
+# Use 127.0.0.1, NOT localhost: Next.js (and others) bind IPv4 0.0.0.0 only, and localhost can
+# resolve to ::1 first -> connection refused.
+tunnel: <TUNNEL_ID>
+credentials-file: /home/user/.cloudflared/<TUNNEL_ID>.json
+ingress:
+  - hostname: shop-dev.example.com
+    service: http://127.0.0.1:8080
+  - hostname: admin-dev.example.com
+    service: http://127.0.0.1:9000
+  - service: http_status:404

@@ -74,6 +74,19 @@ sudo rc-service nftables start
 Confirm it's enforcing: `sudo nft list chain inet filter input` should show `policy drop`, and a fresh
 SSH connection still works (that proves the `:22` rule matches on this quirky netfilter).
 
+### Restrict SSH to trusted sources (recommended)
+
+The rule above accepts `:22` from **anywhere**. Tighten it to just your LAN (and optionally a known
+remote IP) so the internet can't even reach sshd — replace the `tcp dport 22 accept` line with:
+
+```
+ip saddr { 192.168.0.0/24, 203.0.113.7 } tcp dport 22 accept
+```
+
+Keep your own subnet in the set or you'll lock yourself out (use the self-revert safety!). This makes
+brute-force protection (fail2ban/sshguard) largely redundant — with keys-only auth and a source
+allowlist, nothing untrusted can reach the login at all.
+
 ### Opening a port for a service
 
 Default-drop means a container service (host networking) **isn't reachable until you open its port**.
@@ -124,6 +137,10 @@ Extend `/etc/docker/daemon.json` (keep the host-networking keys from SERVER-SETU
 - The daemon socket is a **local unix socket** — never expose it over TCP (`-H tcp://…`).
 - Run containers as a non-root user (`--user`) where the image allows it.
 - `no-new-privileges` is now the default for containers.
+- **`docker` group = root.** Anyone who can run `docker` — including a self-hosted CI runner with the
+  socket mounted — can mount the host filesystem and become root. Treat socket access as root access:
+  trusted users/automation only, and private repos only for any runner (see
+  [APP-HOSTING.md](APP-HOSTING.md)).
 
 ---
 

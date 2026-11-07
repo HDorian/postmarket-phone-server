@@ -10,8 +10,11 @@ trick is to **bridge the phone's USB into WSL with `usbipd-win`** and flash from
 
 > ✅ **Status: working, end to end.** A OnePlus 5T boots postmarketOS **v26.06** (mainline kernel,
 > OpenRC, headless), runs **standalone on Wi‑Fi**, runs **Docker**, and is **hardened** (keys-only
-> SSH + `nftables` firewall). Flashing is below; turning it into a real server is in
-> [`docs/SERVER-SETUP.md`](docs/SERVER-SETUP.md) and [`docs/HARDENING.md`](docs/HARDENING.md).
+> SSH + `nftables` firewall). It even **hosts real apps**: multiple containers behind a free Cloudflare
+> Tunnel (public HTTPS, no open ports) with **`git push` → auto-deploy** via a self-hosted runner, plus
+> a live metrics dashboard on its own screen. Flashing is below; turning it into a real server is in
+> [`docs/SERVER-SETUP.md`](docs/SERVER-SETUP.md), [`docs/HARDENING.md`](docs/HARDENING.md) and
+> [`docs/APP-HOSTING.md`](docs/APP-HOSTING.md).
 
 > ⚠️ **This erases the phone**, and the 5T port is **archived/unmaintained** upstream: audio is
 > broken (irrelevant for a server) and there are no more upstream updates. **Wi‑Fi does work**
@@ -113,20 +116,19 @@ the why and for alternatives (static IP, driving it from WSL via `ssh.exe`, keys
 
 ---
 
-## Day 2 — make it a real server
+## Day 2 & 3 — make it a real server (and host apps)
 Once you're in, change the default password (`sudo passwd user`), then follow:
 
 - **[`docs/SERVER-SETUP.md`](docs/SERVER-SETUP.md)** — join **Wi‑Fi** (go standalone, ditch the
-  cable), fix the clock (**NTP** — it boots at 1970, which breaks TLS), and install **Docker** with
-  the kernel workarounds this archived port needs (cgroup **v1**, host networking). Optional: a live
-  status dashboard on the phone's screen.
-- **[`docs/HARDENING.md`](docs/HARDENING.md)** — keys-only SSH, a working **`nftables`** firewall
-  (the `iptables` shim can't do stateful rules on this kernel — native `nft` can), auto-updates, and
-  Docker hardening.
-
-For a public HTTPS endpoint from behind home CGNAT, a free
-[Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
-works well and needs no port-forwarding.
+  cable), fix the clock (**NTP** — it boots at 1970, which breaks TLS), install **Docker** with the
+  kernel workarounds this archived port needs (cgroup **v1**, host networking), and set up the **live
+  split dashboard** on the phone's screen (+ power-button screen toggle).
+- **[`docs/HARDENING.md`](docs/HARDENING.md)** — keys-only SSH (+ a source allowlist), a working
+  **`nftables`** firewall (the `iptables` shim can't do stateful rules on this kernel — native `nft`
+  can), auto-updates, and Docker hardening.
+- **[`docs/APP-HOSTING.md`](docs/APP-HOSTING.md)** — host multiple apps (host networking), publish them
+  on free **public HTTPS** via a **Cloudflare Tunnel** (no open ports, works behind home CGNAT), and
+  get **`git push` → auto-deploy** with a self-hosted GitHub runner on the phone.
 
 ---
 
@@ -146,9 +148,14 @@ wsl/01-install-wsl-tools.sh         fastboot, usbip client, pmbootstrap
 wsl/bridge-phone.sh                 bridge the phone's USB into WSL (fastboot)
 wsl/02-build-pmos.sh                configure + build the pmOS image (v26.06)
 wsl/03-flash-pmos.sh                unlock + flash + reboot
+phone/console/                      live dashboard + power-button screen toggle (runs on the phone)
+phone/cloudflared/                  Cloudflare named-tunnel service + config example
+phone/runner/                       self-hosted GitHub Actions runner (push-to-deploy)
+phone/stack/                        multi-app docker-compose example (host networking)
 docs/ACCESS.md                      getting in after boot (RNDIS/SSH), in depth
-docs/SERVER-SETUP.md                day 2: Wi-Fi standalone, NTP, Docker, status screen
+docs/SERVER-SETUP.md                day 2: Wi-Fi standalone, NTP, Docker, live dashboard
 docs/HARDENING.md                   keys-only SSH, nftables firewall, auto-updates, Docker
+docs/APP-HOSTING.md                 day 3: multi-app, Cloudflare Tunnel, push-to-deploy
 docs/TROUBLESHOOTING.md             every trap we hit, and the fix
 ```
 
