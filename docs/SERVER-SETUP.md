@@ -187,10 +187,15 @@ echo '* * * * * /usr/local/bin/screen-keepalive.sh' | sudo tee -a /etc/crontabs/
 sudo rc-service crond restart
 ```
 
-`powerkey-listen.py` reads the `pm8941_pwrkey` event node as root and toggles the backlight
-(`/sys/class/backlight/*/bl_power` + `brightness`) on each short press; `screen-keepalive.sh` re-asserts
-it on if it sleeps on its own but respects a deliberate power-off (tracked in `/run/screen.off`). Add
-your `setfont` line to a `/etc/local.d/*.start` script so the big font also survives reboot.
+`powerkey-listen.py` reads the `pm8941_pwrkey` event node as root. A **short press toggles the screen**
+(backlight `bl_power` + `brightness`); **holding ~2.5 s runs a clean `poweroff`** ("close the phone when
+the servers aren't needed"). `screen-keepalive.sh` re-asserts the screen on if it sleeps on its own but
+respects a deliberate power-off (tracked in `/run/screen.off`). Add your `setfont` line to a
+`/etc/local.d/*.start` script so the big font also survives reboot.
+
+**Powering back on is hardware, not software** — when the phone is off the OS isn't running, so the
+PMIC handles the button: **hold power ~2–3 s to boot**. (The 5T also auto-boots when USB power is
+*applied*, so to truly stay off, shut it down with the cable unplugged.)
 
 ---
 
