@@ -1,0 +1,36 @@
+name: Device port
+description: You got it (or want to get it) running on a phone other than the OnePlus 5T.
+labels: ["device-port", "enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Almost everything here is generic Alpine/OpenRC + Docker — only the flashing scripts and a few
+        kernel workarounds are device-specific. Share what you found and we can generalize the repo.
+  - type: input
+    id: device
+    attributes:
+      label: Device / pmaports codename
+      placeholder: PinePhone (pine64-pinephone)
+    validations:
+      required: true
+  - type: textarea
+    id: status
+    attributes:
+      label: What works / what doesn't
+      description: Boots headless? Wi-Fi? Docker (cgroups + networking)? nftables firewall? The dashboard?
+    validations:
+      required: true
+  - type: textarea
+    id: diffs
+    attributes:
+      label: What had to change vs the OnePlus 5T
+      description: Kernel flags, flashing steps, cgroup mode, networking model, service tweaks, etc.
+    validations:
+      required: false
+  - type: checkboxes
+    id: offer
+    attributes:
+      label: Contribution
+      options:
+        - label: I'm willing to open a PR with the device-specific changes

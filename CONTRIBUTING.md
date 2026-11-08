@@ -33,21 +33,67 @@ clean, reproducible contributions are very welcome.
 5. **Test on real hardware** where you can, and say what you tested on. "Untested, but should work" is
    fine as long as you label it.
 
-## Submitting changes
+## Workflow
 
-- Fork, branch, and open a PR against `main` with a clear description of **what** and **why**.
-- Keep scripts POSIX-ish where the target is Alpine's `sh`/busybox (the phone), and note when a script
-  intentionally needs `bash` (e.g. `pipeline/deploy.sh`).
-- Match the existing doc style: short, precise, with the *why* behind each non-obvious step (this repo
-  is as much a field guide as it is scripts).
-- Run shell scripts through `shellcheck` if you have it.
+1. **Open an issue first** for anything non-trivial (a new device port, a feature, a behavior change),
+   so we can agree on the approach before you spend time. Small fixes and typo PRs can skip this.
+2. **Fork** the repo and create a topic branch off `main`. Name it `type/short-description`, e.g.
+   `feat/pinephone-port`, `fix/cloudflared-logpath`, `docs/hardening-typo`.
+3. Make focused commits (see **Commit messages** below). **One logical change per PR** — don't mix a
+   refactor, a feature and a reformat.
+4. Open a **pull request against `main`** with a clear **what** and **why**, and link the issue it
+   closes (`Closes #123`). Fill in the PR template.
+5. A maintainer reviews; address feedback by pushing more commits (we squash on merge, so you don't
+   need to rewrite history during review).
+
+## Commit messages — Conventional Commits
+
+This repo follows [**Conventional Commits**](https://www.conventionalcommits.org/). The subject line is:
+
+```
+<type>(<scope>): <imperative summary>
+```
+
+- **types:** `feat`, `fix`, `docs`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`
+- **scopes** (optional but encouraged): `phone`, `pipeline`, `wsl`, `windows`, `docs`, `runner`,
+  `cloudflared`, `console`
+- **summary:** imperative mood, lower-case, no trailing period, aim for ≤ 72 chars
+  ("add", not "added"/"adds").
+- **breaking changes:** add `!` after the type/scope (`feat(pipeline)!: ...`) **and** a
+  `BREAKING CHANGE:` footer explaining the migration.
+- Put the *why* in the body when it isn't obvious; wrap the body at ~72 columns.
+
+Examples (the style already used in this repo's history):
+
+```
+feat(phone): power button hold = clean shutdown
+fix(cloudflared): log under the user's home so the service child survives
+docs(guides): split the flashing walkthrough out of the README
+```
+
+## Code & docs style
+
+- Keep scripts **POSIX-ish** where the target is Alpine's `sh`/busybox (the phone), and note when a
+  script intentionally needs `bash` (e.g. `pipeline/deploy.sh`).
+- Run shell scripts through **`shellcheck`** before pushing.
+- Match the existing doc style: short, precise, with the **why** behind each non-obvious step (this
+  repo is as much a field guide as it is scripts).
+- Never commit secrets, PATs, tunnel creds or `.env` files — they live on the device under
+  `/srv/nono/secrets/` and are mounted at runtime. See [`.gitignore`](.gitignore).
 
 ## Reporting problems
 
-Open an issue with: the phone model, the **postmarketOS release** (`cat /etc/os-release`), your host
-OS (Windows + WSL2 version, or native Linux), the exact command, and the full error. The
+Use the **[issue tracker](../../issues)** — there are templates for **bug reports**, **device ports**
+(getting it running on another phone), and **feature requests**. For a bug, include: the phone model,
+the **postmarketOS release** (`cat /etc/os-release`), your host OS (Windows + WSL2 version, or native
+Linux), the exact command, and the full error. The
 [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) file is where hard-won fixes accumulate — if you
-solved something that isn't there, add it.
+solved something that isn't there, add it in your PR.
+
+## Be decent
+
+Be respectful and assume good faith. This is a hobby project people contribute to in their spare time;
+keep discussion constructive and on-topic.
 
 ## License
 

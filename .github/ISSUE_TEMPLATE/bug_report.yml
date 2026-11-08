@@ -1,0 +1,63 @@
+name: Bug report
+description: Something didn't work — flashing, boot, server setup, hardening, or app hosting.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please skim [`docs/TROUBLESHOOTING.md`](../blob/main/docs/TROUBLESHOOTING.md)
+        first — many traps (wrong pmOS channel, 1970 clock, cgroup v2, the iptables shim, RNDIS…) are
+        already covered.
+  - type: input
+    id: phone
+    attributes:
+      label: Phone model / codename
+      placeholder: OnePlus 5T (dumpling)
+    validations:
+      required: true
+  - type: input
+    id: pmos
+    attributes:
+      label: postmarketOS release
+      description: The VERSION line from `cat /etc/os-release`.
+      placeholder: v26.06
+    validations:
+      required: true
+  - type: dropdown
+    id: host
+    attributes:
+      label: Host OS (where you flashed from)
+      options:
+        - Windows 10/11 + WSL2
+        - Native Linux
+        - macOS
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Which stage?
+      options:
+        - Flashing (guide 1)
+        - First access / SSH (guide 2)
+        - Server setup — Wi-Fi / NTP / Docker / dashboard (guide 3)
+        - Hardening (guide 4)
+        - App hosting — tunnel / runner / pipeline (guide 5)
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you ran, what you expected, and what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Exact command + full error / logs
+      render: shell
+    validations:
+      required: false

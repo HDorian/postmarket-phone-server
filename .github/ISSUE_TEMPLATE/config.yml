@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Troubleshooting guide
+    url: https://github.com/HDorian/postmarket-phone-server/blob/main/docs/TROUBLESHOOTING.md
+    about: Many flashing / boot / Docker / firewall traps are already documented here — check first.
+  - name: Contributing guide
+    url: https://github.com/HDorian/postmarket-phone-server/blob/main/CONTRIBUTING.md
+    about: Workflow, Conventional Commits, and the archived-kernel constraints to respect.

@@ -91,8 +91,8 @@ powershell -ExecutionPolicy Bypass -File windows\install-windows-tools.ps1
 ```
 
 ```bash
-git clone https://github.com/HDorian/phonewslink.git
-cd phonewslink/wsl
+git clone https://github.com/HDorian/postmarket-phone-server.git
+cd postmarket-phone-server/wsl
 ./01-install-wsl-tools.sh
 ./bridge-phone.sh      # phone in fastboot (Vol-Up + Power); click YES on the UAC popup
 ./02-build-pmos.sh     # v26.06 + mainline + OpenRC, headless
@@ -148,10 +148,21 @@ to your LAN), nothing exposed inbound (the tunnel dials out), secrets kept on th
 
 ---
 
+## Beyond the OnePlus 5T
+
+It's built on a 5T, but almost nothing here is 5T-specific: the server, hardening, Docker, tunnel and
+push-to-deploy are generic **Alpine/OpenRC + Docker**. Only the flashing scripts and a handful of
+kernel workarounds (cgroup v1, host networking, `nftables`) are device-specific. So it can be
+**extended to other postmarketOS-supported phones** — if you port it to another device, a PR is very
+welcome.
+
 ## Contributing & license
 
-Contributions welcome — ports to other phones, doc fixes, new app recipes. See
-[CONTRIBUTING.md](CONTRIBUTING.md). Licensed under the [MIT License](LICENSE).
+Contributions are welcome — porting to other phones, doc fixes, new app recipes. Please read
+**[CONTRIBUTING.md](CONTRIBUTING.md)** first: it covers the workflow, **[Conventional
+Commits](https://www.conventionalcommits.org/)**, and the archived-kernel constraints to respect. Bugs
+and ideas go in the **[issue tracker](../../issues)** (there are templates for bug reports, device
+ports, and feature requests). Licensed under the [MIT License](LICENSE).
 
 ## Credits
 

@@ -1,0 +1,25 @@
+name: Feature request
+description: An idea or enhancement — a new app recipe, backups, a better dashboard, etc.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's the problem / use case?
+      description: What are you trying to do that the project doesn't make easy today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: false
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Fits the project's constraints
+      description: See the ground rules in CONTRIBUTING.md.
+      options:
+        - label: It's free / self-hostable (no paid infra required)
+        - label: It respects the archived-kernel limits (host networking, cgroup v1, nftables)

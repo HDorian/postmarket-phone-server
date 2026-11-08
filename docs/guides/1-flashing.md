@@ -57,8 +57,8 @@ On the phone: **Settings → About phone →** tap *Build number* 7× to enable 
 ### 3. WSL tools
 
 ```bash
-git clone https://github.com/HDorian/phonewslink.git
-cd phonewslink/wsl
+git clone https://github.com/HDorian/postmarket-phone-server.git
+cd postmarket-phone-server/wsl
 ./01-install-wsl-tools.sh
 ```
 
