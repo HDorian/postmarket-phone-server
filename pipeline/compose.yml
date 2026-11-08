@@ -1,0 +1,83 @@
+# The webapp stack that runs on the phone — concrete example (a Medusa 2 API + a Next.js storefront
+# + Postgres). This is the real shape of the stack behind the push-to-deploy pipeline; rename the
+# images/services for your own app.
+#
+# HOST NETWORKING ONLY. The archived kernel can't run docker's bridge (nf_tables NAT fails) and there
+# is no /dev/net/tun, so every service uses `network_mode: host` and binds the host directly:
+#   postgres :5432   medusa/api :9000   storefront :8080
+# There is NO `-p` publishing and NO compose bridge DNS — services reach each other via 127.0.0.1:<port>.
+# Images are built by deploy.sh (with --network=host); compose just runs them.
+#
+# Secrets come from env_file paths that live ON THE PHONE under /srv/nono/secrets/ — never committed.
+name: nono-shop
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nonos-pg
+    network_mode: host                     # 127.0.0.1:5432
+    environment:
+      POSTGRES_USER: medusa
+      POSTGRES_PASSWORD: change-me          # localhost-only + firewalled, but still set a real value
+      POSTGRES_DB: medusa
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medusa"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    mem_limit: 1536m
+
+  medusa:
+    image: nono/medusa:latest               # built by deploy.sh (arm64, on the phone)
+    container_name: nonos-medusa
+    network_mode: host                      # 127.0.0.1:9000
+    env_file:
+      - /srv/nono/secrets/medusa.env        # DB url, JWT/cookie secrets, CORS, etc. — on the phone
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9000/health >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 90s
+    restart: unless-stopped
+    mem_limit: 2560m
+
+  storefront:
+    image: nono/web:latest                  # built by deploy.sh AFTER medusa is up (sitemap fetch)
+    container_name: nonos-web
+    network_mode: host
+    env_file:
+      - /srv/nono/secrets/nonos.env         # NEXT_PUBLIC_* + server-side keys — on the phone
+    environment:
+      - PORT=8080
+      - HOSTNAME=0.0.0.0
+    volumes:
+      - webcache:/app/.next/cache           # persist optimized-image cache across redeploys
+    depends_on:
+      medusa:
+        condition: service_healthy
+    healthcheck:
+      # 127.0.0.1 (not localhost): Next binds IPv4 0.0.0.0 only; localhost -> ::1 fails
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080 >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+    mem_limit: 1536m
+    # NOTE: a read_only rootfs is incompatible with Next's ISR (it writes regenerated pages back into
+    # .next/server + .next/cache), so we keep cap_drop/no-new-privileges instead of read_only.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  pgdata:
+  webcache:

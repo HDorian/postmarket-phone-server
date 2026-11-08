@@ -1,1 +1,18 @@
-# nothing to ignore yet
+# Secrets never belong in git. On the phone they live under /srv/nono/secrets/
+# and are mounted into containers at runtime — never committed, never baked into images.
+*.env
+!*.env.example
+.cloudflared/
+*.credentials.json   # cloudflared tunnel credentials (<tunnel-id>.json) etc.
+
+# Runtime / logs
+*.log
+/run/
+
+# OS + editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/

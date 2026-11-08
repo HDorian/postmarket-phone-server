@@ -1,0 +1,29 @@
+# Push-to-deploy. This file belongs in your APP repo at:  .github/workflows/deploy.yml
+# (it is NOT used from this infra repo — it's here as the reference copy).
+#
+# On every push to main, GitHub dispatches the job to the self-hosted runner living ON THE PHONE
+# (label: nono-phone, started by ../phone/runner/run-runner.sh). The runner checks out the repo on the
+# phone and runs deploy.sh, which builds the images natively (arm64) and restarts the stack. No cloud
+# build, no registry, no inbound ports — the runner dials OUT to GitHub.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+    paths:                       # only rebuild when app/stack code changes
+      - "nonos/**"               # storefront (rename for your app)
+      - "medusa/**"              # API (rename for your app)
+      - "deploy/**"              # the compose.yml + deploy.sh in your app repo
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch: {}          # manual "Run workflow" button
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, nono-phone]      # the runner's labels
+    concurrency:
+      group: deploy-phone                   # never two deploys at once
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build + deploy stack
+        run: bash deploy/deploy.sh

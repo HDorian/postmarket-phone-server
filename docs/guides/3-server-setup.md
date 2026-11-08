@@ -1,8 +1,8 @@
 # Day 2 — turn the booted phone into a real server
 
-Once postmarketOS boots and you can SSH in (see [`ACCESS.md`](ACCESS.md)), this is how you make it a
+Once postmarketOS boots and you can SSH in (see [First access](2-first-access.md)), this is how you make it a
 proper, standalone server: on **Wi‑Fi** (so the cable is just power), with the **clock synced** and
-**Docker** running. Then see [`HARDENING.md`](HARDENING.md) to lock it down.
+**Docker** running. Then see [Hardening](4-hardening.md) to lock it down.
 
 All commands run **on the phone** (over SSH). `user` can `sudo` with the password you set during the
 build.
@@ -130,7 +130,7 @@ You should see **"Hello from Docker!"**. That's a real container running on your
 
 Turn the shelf phone's screen into a **split monitor**: a full metrics panel on top, a live log stream
 below — in a shared `tmux` session you can also drive from a laptop. Ready-made scripts are in
-[`../phone/console/`](../phone/console).
+[`../../phone/console/`](../../phone/console).
 
 ```sh
 sudo apk add tmux bash
@@ -199,5 +199,5 @@ PMIC handles the button: **hold power ~2–3 s to boot**. (The 5T also auto-boot
 
 ---
 
-Next: **[HARDENING.md](HARDENING.md)** — keys-only SSH, a working firewall, auto-updates, and Docker
+Next: **[Hardening](4-hardening.md)** — keys-only SSH, a working firewall, auto-updates, and Docker
 hardening.

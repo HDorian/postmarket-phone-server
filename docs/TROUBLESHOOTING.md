@@ -72,7 +72,7 @@ Switching channels leaves stale chroots. Run `pmbootstrap zap`, or set
 
 ## Can't reach the phone after it boots (RNDIS)
 The USB-net gadget is **RNDIS**, which **WSL can't drive** (no `rndis_host`) but **Windows can**.
-Reach it from Windows — see [`ACCESS.md`](ACCESS.md). A VPN (e.g. NordVPN) on Windows can interfere
+Reach it from Windows — see [First access](guides/2-first-access.md). A VPN (e.g. NordVPN) on Windows can interfere
 with the `172.16.42.0/24` link; disconnect it if ping/SSH misbehaves.
 
 ## Port caveats
@@ -80,7 +80,7 @@ with the `172.16.42.0/24` link; disconnect it if ping/SSH misbehaves.
 - Don't leave a phone battery charging 24/7 unattended (swelling/fire risk).
 
 ## Day 2 traps (Wi‑Fi / NTP / Docker / firewall)
-Full steps are in [`SERVER-SETUP.md`](SERVER-SETUP.md) and [`HARDENING.md`](HARDENING.md); these are
+Full steps are in [Server setup](guides/3-server-setup.md) and [Hardening](guides/4-hardening.md); these are
 the error signatures and quick fixes.
 
 - **Wi‑Fi actually works** (the wiki says "unconfirmed"). `wlan0` comes up via `ath10k_snoc`

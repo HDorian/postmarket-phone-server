@@ -1,14 +1,14 @@
 # Day 3 — host apps with push-to-deploy + public HTTPS
 
-Once the phone runs Docker ([SERVER-SETUP.md](SERVER-SETUP.md)) and is hardened
-([HARDENING.md](HARDENING.md)), you can turn it into a real little app host:
+Once the phone runs Docker ([Server setup](3-server-setup.md)) and is hardened
+([Hardening](4-hardening.md)), you can turn it into a real little app host:
 
 - **many apps side by side** (a web app + WordPress + static sites…),
 - reachable on a **public HTTPS URL** even behind home CGNAT, and
 - **`git push` → it rebuilds and goes live** on its own, in a few minutes.
 
 All free. The pieces are a Docker stack, a Cloudflare Tunnel, and a self-hosted GitHub runner. Example
-files live in [`../phone/`](../phone).
+files live in [`../../phone/`](../../phone).
 
 ---
 
@@ -25,7 +25,7 @@ So the multi-app model is:
 - **"separation" = per-project + own named volumes + `mem_limit`/`cpus` caps** (cgroup v1 works),
   not kernel network isolation. Fine for a personal/test host; know that it isn't a security sandbox.
 
-See [`../phone/stack/compose.example.yml`](../phone/stack/compose.example.yml). Pick a free port per
+See [`../../pipeline/compose.multiapp.yml`](../../pipeline/compose.multiapp.yml). Pick a free port per
 app (e.g. storefront `:8080`, API/admin `:9000`, WordPress `:8081`, a static site `:8082`).
 
 ### Building images on the phone
@@ -59,7 +59,7 @@ cloudflared tunnel login                 # opens a URL; authorize your zone in a
 cloudflared tunnel create phone          # writes the tunnel id + <id>.json creds to ~/.cloudflared/
 ```
 
-Write `~/.cloudflared/config.yml` ([example](../phone/cloudflared/config.yml.example)) mapping each
+Write `~/.cloudflared/config.yml` ([example](../../phone/cloudflared/config.yml.example)) mapping each
 hostname to a local port, then create the DNS records:
 
 ```sh
@@ -72,7 +72,7 @@ cloudflared tunnel route dns phone admin-dev.example.com
 > CNAMEs by hand in the Cloudflare DNS dashboard (same target, proxy **on**).
 
 Run it as a service (survives reboot) with
-[`../phone/cloudflared/cloudflared.openrc`](../phone/cloudflared/cloudflared.openrc):
+[`../../phone/cloudflared/cloudflared.openrc`](../../phone/cloudflared/cloudflared.openrc):
 
 ```sh
 sudo install -m755 phone/cloudflared/cloudflared.openrc /etc/init.d/cloudflared
@@ -93,7 +93,7 @@ The phone is behind NAT, so use an **outbound** mechanism: a self-hosted Actions
 phone** that dials out to GitHub, then builds + restarts the stack locally on every push. No cloud
 build, no registry, no inbound ports.
 
-Run it with [`../phone/runner/run-runner.sh`](../phone/runner/run-runner.sh) (reads a fine-grained
+Run it with [`../../phone/runner/run-runner.sh`](../../phone/runner/run-runner.sh) (reads a fine-grained
 PAT from `/srv/nono/secrets/runner.env`; the container re-registers itself on reboot). Then a minimal
 workflow in your app repo:
 
@@ -148,4 +148,4 @@ slow on this CPU, and every request hits the box. Two free fixes:
 A phone that hosts multiple containerized apps on host networking, publishes them on free public HTTPS
 through a Cloudflare Tunnel (no open ports), and redeploys itself on `git push` via a self-hosted
 runner — with secrets kept on the box and the edge doing the heavy image lifting. Pair it with the live
-console dashboard in [SERVER-SETUP.md](SERVER-SETUP.md#4-live-dashboard-on-the-phone-screen).
+console dashboard in [Server setup](3-server-setup.md#4-live-dashboard-on-the-phone-screen).

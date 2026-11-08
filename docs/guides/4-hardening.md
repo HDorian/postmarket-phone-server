@@ -1,6 +1,6 @@
 # Hardening the phone server
 
-After [SERVER-SETUP.md](SERVER-SETUP.md), lock it down. This box is typically **behind your router's
+After [Server setup](3-server-setup.md), lock it down. This box is typically **behind your router's
 NAT** (not reachable from the internet), so keys-only SSH is the biggest win; the rest is
 defense-in-depth.
 
@@ -140,7 +140,7 @@ Extend `/etc/docker/daemon.json` (keep the host-networking keys from SERVER-SETU
 - **`docker` group = root.** Anyone who can run `docker` — including a self-hosted CI runner with the
   socket mounted — can mount the host filesystem and become root. Treat socket access as root access:
   trusted users/automation only, and private repos only for any runner (see
-  [APP-HOSTING.md](APP-HOSTING.md)).
+  [App hosting](5-app-hosting.md)).
 
 ---
 
