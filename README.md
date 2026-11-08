@@ -1,3 +1,5 @@
+# This is a vibecoded project I started to re-use an old phone for my testing environments.The reason I did it with WSL is because I hate managing anything from windows.
+
 # OnePlus 5T → postmarketOS headless server (Windows + WSL2)
 
 Turn a **OnePlus 5T** (codename `dumpling`, Snapdragon 835 / msm8998) into a small, always-on
